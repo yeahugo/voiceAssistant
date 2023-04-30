@@ -1,4 +1,3 @@
-import snowboydecoder
 import signal
 import wave
 import sys
@@ -168,7 +167,7 @@ def identifyComplete(text):
 
 
 if __name__ == "__main__":
-    porcupine = pvporcupine.create(keywords=['你的唤醒词'], model_paths=['path/to/your/custom/keyword.ppn'])
+    porcupine = pvporcupine.create(keywords=['computer'], model_paths=['computer_raspberry-pi.ppn'])
 
     pa = pyaudio.PyAudio()
     audio_stream = pa.open(rate=porcupine.sample_rate,
