@@ -10,6 +10,9 @@ import base64
 from pyaudio import PyAudio, paInt16
 import webbrowser
 from fetchToken import fetch_token
+import pvporcupine
+import pyaudio
+import struct
 
 interrupted = False  # snowboy监听唤醒结束标志
 endSnow = False  # 程序结束标志
@@ -51,7 +54,7 @@ def detected():
     play('./audio/open.wav')
     global interrupted
     interrupted = True
-    detector.terminate()
+    porcupine.delete()
 
 
 def play(filename):
@@ -165,16 +168,33 @@ def identifyComplete(text):
 
 
 if __name__ == "__main__":
+    porcupine = pvporcupine.create(keywords=['你的唤醒词'], model_paths=['path/to/your/custom/keyword.ppn'])
+
+    pa = pyaudio.PyAudio()
+    audio_stream = pa.open(rate=porcupine.sample_rate,
+                           channels=1,
+                           format=pyaudio.paInt16,
+                           input=True,
+                           frames_per_buffer=porcupine.frame_length)
+
     while endSnow == False:
         interrupted = False
-        detector = snowboydecoder.HotwordDetector('xm.pmdl', sensitivity=0.5)
         print('等待唤醒')
-        detector.start(detected_callback=detected,
-                       interrupt_check=interrupt_callback,
-                       sleep_time=0.03)
+
+        while not interrupted:
+            pcm = audio_stream.read(porcupine.frame_length)
+            pcm = struct.unpack_from("h" * porcupine.frame_length, pcm)
+
+            keyword_index = porcupine.process(pcm)
+            if keyword_index >= 0:
+                detected()
+
         my_record()
         TOKEN = fetch_token()
         speech = get_audio(FILEPATH)
         result = speech2text(speech, TOKEN, int(80001))
         if type(result) == str:
             identifyComplete(result)
+
+    audio_stream.close()
+    pa.terminate()
